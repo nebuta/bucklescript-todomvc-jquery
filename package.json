@@ -1,0 +1,20 @@
+{
+  "name": "bs-webpack-example",
+  "private": true,
+  "dependencies": {
+    "todomvc-common": "~1.0.1",
+    "todomvc-app-css": "~1.0.1",
+    "jquery": "~3"
+  },
+  "scripts": {
+    "compile": "bsc -I bs -c -bs-main bs/main.ml -bs-package-name $npm_package_name -bs-package-output js || true",
+    "webpack": "./node_modules/webpack/bin/webpack.js",
+    "build": "npm run compile && npm run webpack",
+    "refresh-jquery": "npm rm -D bucklescript-jquery && npm i -D ../bucklescript-jquery/bucklescript-jquery-0.0.1.tgz",
+    "compile-external": "bsc -I bs -c -bs-main bs/main.ml -bs-package-include bucklescript-jquery -bs-package-name $npm_package_name -bs-package-output js || true"
+  },
+  "devDependencies": {
+    "bs-platform": "^1.0.1",
+    "webpack": "^1.13.2"
+  }
+}
