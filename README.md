@@ -4,6 +4,8 @@ BuckleScript + jQuery example.
 
 Translated from [jQuery TodoMVC Example](https://github.com/tastejs/todomvc/tree/gh-pages/examples/jquery).
 
+Working demo is [here](http://nebuta.github.io/bs-todomvc).
+
 ## How to run
 
 ```
