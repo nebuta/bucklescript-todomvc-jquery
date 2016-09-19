@@ -2,5 +2,18 @@
 'use strict';
 
 
+function readFilter(s) {
+  switch (s) {
+    case "active" : 
+        return /* Active */1;
+    case "all" : 
+        return /* All */0;
+    case "completed" : 
+        return /* Completed */2;
+    default:
+      return /* All */0;
+  }
+}
 
+exports.readFilter = readFilter;
 /* No side effect */

@@ -16,7 +16,8 @@ let jq = jquery;;
 let jq' = jquery';;
 
 (* Global state for app *)
-let state = {todos = [||]; filter = "all"};;
+let state = {todos = [||]; filter = All};;
+let derivedState = {todoIdx = Hashtbl.create 100};;
 
 let uuid () =
 	let c i = string_of_int (Random.int 9) in
@@ -39,19 +40,14 @@ let toggle (jq : jquery) (flag : bool) : unit =
  	else
  		hide jq);;
 
-let getCompletedTodos (todos : todo array) : todo array =
-	array_filter (fun x -> x.completed) todos
-
-let getActiveTodos (todos : todo array) : todo array =
-	array_filter (fun x -> not x.completed) todos
-
-let getFilteredTodos todos =
-	if state.filter = "active" then getActiveTodos todos
-	else if state.filter = "completed" then getCompletedTodos todos
-	else todos;;
+let getFilteredTodos (filterType : filterType) (todos : todo array) : todo array =
+	match filterType with
+		All -> todos;
+		| Active -> array_filter (fun x -> not x.completed) todos;
+		| Completed -> array_filter (fun x -> x.completed) todos;;
 
 let renderFooter () =
- 	let activeTodoCount = Array.length (getActiveTodos state.todos) in
+ 	let activeTodoCount = Array.length (getFilteredTodos Active state.todos) in
  	let completedTodoCount = Array.length state.todos - activeTodoCount in
  	let activeTodoWord = pluralize activeTodoCount "item" in
 	let html = footerTemplate
@@ -62,12 +58,18 @@ let renderFooter () =
 	ignore (jquery "#footer" |> Jquery.html html);
  	toggle (jquery "#footer") (Array.length state.todos > 0);;
 
+let calcIdx todos idx =
+	let f i t =
+		Hashtbl.add idx t.id i in
+	Array.iteri f todos;;
+
 let render () =
+	calcIdx state.todos derivedState.todoIdx;
 	let todos =
 		try
 			(* Ad hoc fix to avoid null value *)
 			Js.log (Array.length state.todos);
-			getFilteredTodos state.todos
+			getFilteredTodos state.filter state.todos
 		with
 			_ ->
 				state.todos <- [||];
@@ -83,7 +85,7 @@ let render () =
 
 let indexFromEl el =
 	let id = jquery' el |> closest "li" |> data_get "id" in
-	findi state.todos (fun t -> t.id = id);;
+	Hashtbl.find derivedState.todoIdx id;;
 
 let bind_events () =
 	let newTodoKeyup = fun [@bs.this] jq e ->
@@ -101,7 +103,7 @@ let bind_events () =
 	in
 	ignore (jq "#new-todo" |> on "keyup" newTodoKeyup);
 	let destroy_body jq e =
-		let Some i = indexFromEl e##target in
+		let i = indexFromEl e##target in
 		state.todos <- array_splice i state.todos;
 		render () in
 	let destroy = fun [@bs.this] jq e ->
@@ -110,7 +112,7 @@ let bind_events () =
 	let edit = fun [@bs.this] jq e ->
 		let input = jq' e##target |> closest "li"
 			|> addClass "editing"  |> find ".edit" in
-		let Some i = indexFromEl e##target in
+		let i = indexFromEl e##target in
 		input |> value (state.todos.(i).title) |> focus;
 		true in
 	let editKeyup = fun [@bs.this] jq e ->
@@ -120,7 +122,7 @@ let bind_events () =
 			ignore ((jq' e##target) |> data "abort" "true" |> blur);
 		true in
 	let onToggle = fun [@bs.this] jq e ->
-		let Some i = indexFromEl e##target in
+		let i = indexFromEl e##target in
 		state.todos.(i) <-
 			{state.todos.(i)
 				with completed = not state.todos.(i).completed};
@@ -128,7 +130,7 @@ let bind_events () =
 		true in
 	let update = fun [@bs.this] jq e ->
 		let el = jq' e##target in
-		let Some i = indexFromEl e##target in
+		let i = indexFromEl e##target in
 		let v = String.trim (el |> value_get) in
 		if v = "" then
 			destroy_body jq e
@@ -142,8 +144,8 @@ let bind_events () =
 		render ();
 		true in
 	let destroyCompleted = fun [@bs.this] jq e ->
-		state.todos <- getActiveTodos state.todos;
-		state.filter <- "all";
+		state.todos <- getFilteredTodos Active state.todos;
+		state.filter <- All;
 		render ();
 		true in
 	ignore (jq "#todo-list"
@@ -154,14 +156,15 @@ let bind_events () =
 		|> on' "click" ".destroy" destroy);
 	ignore (jq "#footer" |> on' "click" "#clear-completed" destroyCompleted);
 	ignore (jq [%bs.raw "window"] |> on "hashchange" (fun [@bs.this] jq e ->
-		state.filter <- String.sub urlHash 2 (String.length urlHash - 2);
+		state.filter <- readFilter (String.sub urlHash 2 (String.length urlHash - 2));
 		render ();
 		true
 	));
 	();;
 
 let init () =
-	Random.self_init (); 
+	Random.self_init ();
+	state.filter <- readFilter (String.sub urlHash 2 (String.length urlHash - 2));
 	bind_events ();
 	try
 	 	ignore (state.todos <- store_get "todos-jquery-bucklescript");
