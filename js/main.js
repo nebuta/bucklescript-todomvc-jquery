@@ -2,10 +2,9 @@
 'use strict';
 
 var ArrayOps     = require("./arrayOps");
-var Hashtbl      = require("bs-platform/lib/js/hashtbl");
-var Pervasives   = require("bs-platform/lib/js/pervasives");
 var Jquery$prime = require("jquery");
-var $$Array      = require("bs-platform/lib/js/array");
+var Hashtbl      = require("bs-platform/lib/js/hashtbl");
+var Model        = require("./model");
 var Template     = require("./template");
 var Jquery       = require("./jquery");
 var $$String     = require("bs-platform/lib/js/string");
@@ -23,34 +22,6 @@ var state = /* record */[
 
 var derivedState = /* record */[/* todoIdx */Hashtbl.create(/* None */0, 100)];
 
-function uuid() {
-  var c = function () {
-    return Pervasives.string_of_int(Random.$$int(9));
-  };
-  var c8 = function () {
-    return $$String.concat("", $$Array.to_list($$Array.map(c, ArrayOps.array_range(8))));
-  };
-  return $$String.concat("-", $$Array.to_list($$Array.map(c8, ArrayOps.array_range(4))));
-}
-
-function pluralize(count, word) {
-  if (count <= 1) {
-    return word;
-  }
-  else {
-    return word + "s";
-  }
-}
-
-function store_set(namespace, data) {
-  localStorage.setItem(namespace, JSON.stringify(data));
-  return /* () */0;
-}
-
-function store_get(namespace) {
-  return JSON.parse(localStorage.getItem(namespace));
-}
-
 function toggle(jq, flag) {
   if (flag) {
     jq.show();
@@ -61,44 +32,21 @@ function toggle(jq, flag) {
   return /* () */0;
 }
 
-function getFilteredTodos(filterType, todos) {
-  switch (filterType) {
-    case 0 : 
-        return todos;
-    case 1 : 
-        return ArrayOps.array_filter(function (x) {
-                    return !x[/* completed */2];
-                  }, todos);
-    case 2 : 
-        return ArrayOps.array_filter(function (x) {
-                    return x[/* completed */2];
-                  }, todos);
-    
-  }
-}
-
 function renderFooter() {
-  var activeTodoCount = getFilteredTodos(/* Active */1, state[/* todos */0]).length;
+  var activeTodoCount = Model.getFilteredTodos(/* Active */1, state[/* todos */0]).length;
   var completedTodoCount = state[/* todos */0].length - activeTodoCount | 0;
-  var activeTodoWord = pluralize(activeTodoCount, "item");
+  var activeTodoWord = Model.pluralize(activeTodoCount, "item");
   var html = Template.footerTemplate(activeTodoCount, activeTodoWord, completedTodoCount, state[/* filter */1]);
   Jquery.jquery("#footer").html(html);
   return toggle(Jquery.jquery("#footer"), +(state[/* todos */0].length > 0));
 }
 
-function calcIdx(todos, idx) {
-  var f = function (i, t) {
-    return Hashtbl.add(idx, t[/* id */1], i);
-  };
-  return $$Array.iteri(f, todos);
-}
-
 function render() {
-  calcIdx(state[/* todos */0], derivedState[/* todoIdx */0]);
+  Model.calcIdx(state[/* todos */0], derivedState[/* todoIdx */0]);
   var todos;
   try {
     console.log(state[/* todos */0].length);
-    todos = getFilteredTodos(state[/* filter */1], state[/* todos */0]);
+    todos = Model.getFilteredTodos(state[/* filter */1], state[/* todos */0]);
   }
   catch (exn){
     state[/* todos */0] = /* array */[];
@@ -109,7 +57,7 @@ function render() {
   Jquery.jquery("#todo-list").html(html);
   toggle(Jquery.jquery("#main"), +(todoCount > 0));
   renderFooter(/* () */0);
-  localStorage.setItem("todos-jquery-bucklescript", JSON.stringify(todos));
+  Model.store_set("todos-jquery-bucklescript", todos);
   return /* () */0;
 }
 
@@ -124,7 +72,7 @@ function bind_events() {
     var v = $$String.trim(input.val());
     if (e.which === 13 && v !== "") {
       console.log(e);
-      var t_001 = /* id */uuid(/* () */0);
+      var t_001 = /* id */Model.uuid(/* () */0);
       var t = /* record */[
         /* title */v,
         t_001,
@@ -199,7 +147,7 @@ function bind_events() {
     return /* true */1;
   };
   var destroyCompleted = function () {
-    state[/* todos */0] = getFilteredTodos(/* Active */1, state[/* todos */0]);
+    state[/* todos */0] = Model.getFilteredTodos(/* Active */1, state[/* todos */0]);
     state[/* filter */1] = /* All */0;
     render(/* () */0);
     return /* true */1;
@@ -219,7 +167,7 @@ function init() {
   state[/* filter */1] = Types.readFilter($$String.sub(window.location.hash, 2, window.location.hash.length - 2 | 0));
   bind_events(/* () */0);
   try {
-    state[/* todos */0] = JSON.parse(localStorage.getItem("todos-jquery-bucklescript"));
+    state[/* todos */0] = Model.store_get("todos-jquery-bucklescript");
     if (state[/* todos */0].length) {
       return 0;
     }
@@ -229,8 +177,7 @@ function init() {
     }
   }
   catch (exn){
-    localStorage.setItem("todos-jquery-bucklescript", JSON.stringify(/* array */[]));
-    return /* () */0;
+    return Model.store_set("todos-jquery-bucklescript", /* array */[]);
   }
 }
 
@@ -244,22 +191,16 @@ var escape_key = 27;
 
 var jq = Jquery.jquery;
 
-exports.enter_key        = enter_key;
-exports.escape_key       = escape_key;
-exports.jq               = jq;
-exports.jq$prime         = jq$prime;
-exports.state            = state;
-exports.derivedState     = derivedState;
-exports.uuid             = uuid;
-exports.pluralize        = pluralize;
-exports.store_set        = store_set;
-exports.store_get        = store_get;
-exports.toggle           = toggle;
-exports.getFilteredTodos = getFilteredTodos;
-exports.renderFooter     = renderFooter;
-exports.calcIdx          = calcIdx;
-exports.render           = render;
-exports.indexFromEl      = indexFromEl;
-exports.bind_events      = bind_events;
-exports.init             = init;
+exports.enter_key    = enter_key;
+exports.escape_key   = escape_key;
+exports.jq           = jq;
+exports.jq$prime     = jq$prime;
+exports.state        = state;
+exports.derivedState = derivedState;
+exports.toggle       = toggle;
+exports.renderFooter = renderFooter;
+exports.render       = render;
+exports.indexFromEl  = indexFromEl;
+exports.bind_events  = bind_events;
+exports.init         = init;
 /* derivedState Not a pure module */

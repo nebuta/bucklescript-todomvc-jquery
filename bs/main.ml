@@ -2,11 +2,8 @@ open Types
 open Template
 open Jquery
 open ArrayOps
+open Model
 
-external stringify : todo array -> string = "JSON.stringify" [@@bs.val]
-external setItem : string -> string -> unit = "localStorage.setItem" [@@bs.val]
-external getItem : string -> string = "localStorage.getItem" [@@bs.val]
-external parseJson : string -> todo array = "JSON.parse" [@@bs.val]
 external urlHash : string = "window.location.hash" [@@bs.val]
 
 let enter_key = 13;;
@@ -19,49 +16,15 @@ let jq' = jquery';;
 let state = {todos = [||]; filter = All};;
 let derivedState = {todoIdx = Hashtbl.create 100};;
 
-let uuid () =
-	let c i = string_of_int (Random.int 9) in
-	let c8 i = String.concat "" (Array.to_list (Array.map c (array_range 8))) in
-	String.concat "-" (Array.to_list @@ Array.map c8 (array_range 4))
-
-let pluralize count word =
-	if count <= 1 then word else word^"s"
-
-let store_set namespace data =
-	setItem namespace (stringify data);;
-
-let store_get namespace =
-	let store = getItem namespace in
-	parseJson store
-
 let toggle (jq : jquery) (flag : bool) : unit =
  	ignore (if flag then
  		show jq
  	else
  		hide jq);;
 
-let getFilteredTodos (filterType : filterType) (todos : todo array) : todo array =
-	match filterType with
-		All -> todos;
-		| Active -> array_filter (fun x -> not x.completed) todos;
-		| Completed -> array_filter (fun x -> x.completed) todos;;
-
-let renderFooter () =
- 	let activeTodoCount = Array.length (getFilteredTodos Active state.todos) in
- 	let completedTodoCount = Array.length state.todos - activeTodoCount in
- 	let activeTodoWord = pluralize activeTodoCount "item" in
-	let html = footerTemplate
-		activeTodoCount
-		activeTodoWord
-		completedTodoCount
-		state.filter in
-	ignore (jquery "#footer" |> Jquery.html html);
- 	toggle (jquery "#footer") (Array.length state.todos > 0);;
-
-let calcIdx todos idx =
-	let f i t =
-		Hashtbl.add idx t.id i in
-	Array.iteri f todos;;
+let indexFromEl el =
+	let id = jquery' el |> closest "li" |> data_get "id" in
+	Hashtbl.find derivedState.todoIdx id;;
 
 let render () =
 	calcIdx state.todos derivedState.todoIdx;
@@ -83,9 +46,17 @@ let render () =
  	store_set "todos-jquery-bucklescript" todos;
 	();;
 
-let indexFromEl el =
-	let id = jquery' el |> closest "li" |> data_get "id" in
-	Hashtbl.find derivedState.todoIdx id;;
+let renderFooter () =
+ 	let activeTodoCount = Array.length (getFilteredTodos Active state.todos) in
+ 	let completedTodoCount = Array.length state.todos - activeTodoCount in
+ 	let activeTodoWord = pluralize activeTodoCount "item" in
+	let html = footerTemplate
+		activeTodoCount
+		activeTodoWord
+		completedTodoCount
+		state.filter in
+	ignore (jquery "#footer" |> Jquery.html html);
+ 	toggle (jquery "#footer") (Array.length state.todos > 0);;
 
 let bind_events () =
 	let newTodoKeyup = fun [@bs.this] jq e ->
