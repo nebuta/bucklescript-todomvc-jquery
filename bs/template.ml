@@ -16,7 +16,7 @@ let footerTemplate
 	(activeTodoCount : int)
 	(activeTodoWord : string)
 	(completedTodoCount : int)
-	(filter : string)
+	(filter : filterType)
 	: string =
 	let sel_active n = if filter = n then "class='selected'" else "" in
 	let ac = string_of_int activeTodoCount in
@@ -24,13 +24,13 @@ let footerTemplate
 	"<span id='todo-count'><strong>"^ac^"</strong> "^activeTodoWord^" left</span>
 			<ul id='filters'>
 				<li>
-					<a "^(sel_active "all")^" href='#/all'>All</a>
+					<a "^(sel_active All)^" href='#/all'>All</a>
 				</li>
 				<li>
-					<a "^(sel_active "active")^" href='#/active'>Active</a>
+					<a "^(sel_active Active)^" href='#/active'>Active</a>
 				</li>
 				<li>
-					<a "^(sel_active "completed")^" href='#/completed'>Completed</a>
+					<a "^(sel_active Completed)^" href='#/completed'>Completed</a>
 				</li>
 			</ul>"^(if completedTodos then "<button id='clear-completed'>Clear completed</button>" else "")
 		;;
