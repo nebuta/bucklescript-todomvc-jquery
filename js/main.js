@@ -32,6 +32,11 @@ function toggle(jq, flag) {
   return /* () */0;
 }
 
+function indexFromEl(el) {
+  var id = Jquery$prime(el).closest("li").data("id");
+  return Hashtbl.find(derivedState[/* todoIdx */0], id);
+}
+
 function renderFooter() {
   var activeTodoCount = Model.getFilteredTodos(/* Active */1, state[/* todos */0]).length;
   var completedTodoCount = state[/* todos */0].length - activeTodoCount | 0;
@@ -59,11 +64,6 @@ function render() {
   renderFooter(/* () */0);
   Model.store_set("todos-jquery-bucklescript", todos);
   return /* () */0;
-}
-
-function indexFromEl(el) {
-  var id = Jquery$prime(el).closest("li").data("id");
-  return Hashtbl.find(derivedState[/* todoIdx */0], id);
 }
 
 function bind_events() {
@@ -164,7 +164,6 @@ function bind_events() {
 
 function init() {
   Random.self_init(/* () */0);
-  state[/* filter */1] = Types.readFilter($$String.sub(window.location.hash, 2, window.location.hash.length - 2 | 0));
   bind_events(/* () */0);
   try {
     state[/* todos */0] = Model.store_get("todos-jquery-bucklescript");
@@ -198,9 +197,9 @@ exports.jq$prime     = jq$prime;
 exports.state        = state;
 exports.derivedState = derivedState;
 exports.toggle       = toggle;
+exports.indexFromEl  = indexFromEl;
 exports.renderFooter = renderFooter;
 exports.render       = render;
-exports.indexFromEl  = indexFromEl;
 exports.bind_events  = bind_events;
 exports.init         = init;
 /* derivedState Not a pure module */

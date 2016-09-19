@@ -26,6 +26,18 @@ let indexFromEl el =
 	let id = jquery' el |> closest "li" |> data_get "id" in
 	Hashtbl.find derivedState.todoIdx id;;
 
+let renderFooter () =
+ 	let activeTodoCount = Array.length (getFilteredTodos Active state.todos) in
+ 	let completedTodoCount = Array.length state.todos - activeTodoCount in
+ 	let activeTodoWord = pluralize activeTodoCount "item" in
+	let html = footerTemplate
+		activeTodoCount
+		activeTodoWord
+		completedTodoCount
+		state.filter in
+	ignore (jquery "#footer" |> Jquery.html html);
+ 	toggle (jquery "#footer") (Array.length state.todos > 0);;
+
 let render () =
 	calcIdx state.todos derivedState.todoIdx;
 	let todos =
@@ -46,18 +58,6 @@ let render () =
  	store_set "todos-jquery-bucklescript" todos;
 	();;
 
-let renderFooter () =
- 	let activeTodoCount = Array.length (getFilteredTodos Active state.todos) in
- 	let completedTodoCount = Array.length state.todos - activeTodoCount in
- 	let activeTodoWord = pluralize activeTodoCount "item" in
-	let html = footerTemplate
-		activeTodoCount
-		activeTodoWord
-		completedTodoCount
-		state.filter in
-	ignore (jquery "#footer" |> Jquery.html html);
- 	toggle (jquery "#footer") (Array.length state.todos > 0);;
-
 let bind_events () =
 	let newTodoKeyup = fun [@bs.this] jq e ->
 		let input = jquery' e##target in
@@ -73,6 +73,7 @@ let bind_events () =
 			false
 	in
 	ignore (jq "#new-todo" |> on "keyup" newTodoKeyup);
+
 	let destroy_body jq e =
 		let i = indexFromEl e##target in
 		state.todos <- array_splice i state.todos;
@@ -135,7 +136,7 @@ let bind_events () =
 
 let init () =
 	Random.self_init ();
-	state.filter <- readFilter (String.sub urlHash 2 (String.length urlHash - 2));
+	(* state.filter <- readFilter (String.sub urlHash 2 (String.length urlHash - 2)); *)
 	bind_events ();
 	try
 	 	ignore (state.todos <- store_get "todos-jquery-bucklescript");
