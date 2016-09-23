@@ -68,9 +68,9 @@ let bind_events () =
 			array_append t state.todos;
 			ignore (input |> value "");
 			render ();
-			true
+			Js.true_ 
 		end else
-			false
+			Js.false_
 	in
 	ignore (jq "#new-todo" |> on "keyup" newTodoKeyup);
 
@@ -80,26 +80,26 @@ let bind_events () =
 		render () in
 	let destroy = fun [@bs.this] jq e ->
 		destroy_body jq e;
-		true in
+		Js.true_ in
 	let edit = fun [@bs.this] jq e ->
 		let input = jq' e##target |> closest "li"
 			|> addClass "editing"  |> find ".edit" in
 		let i = indexFromEl e##target in
-		input |> value (state.todos.(i).title) |> focus;
-		true in
+		ignore (input |> value (state.todos.(i).title) |> focus);
+		Js.true_ in
 	let editKeyup = fun [@bs.this] jq e ->
 		if e##which == enter_key then
 			ignore ((jq' e##target) |> blur)
 		else if e##which == escape_key then
 			ignore ((jq' e##target) |> data "abort" "true" |> blur);
-		true in
+		Js.true_ 	in
 	let onToggle = fun [@bs.this] jq e ->
 		let i = indexFromEl e##target in
 		state.todos.(i) <-
 			{state.todos.(i)
 				with completed = not state.todos.(i).completed};
 		render ();
-		true in
+		Js.true_ in
 	let update = fun [@bs.this] jq e ->
 		let el = jq' e##target in
 		let i = indexFromEl e##target in
@@ -114,12 +114,12 @@ let bind_events () =
 					{state.todos.(i)
 						with title = v};
 		render ();
-		true in
+		Js.true_ in
 	let destroyCompleted = fun [@bs.this] jq e ->
 		state.todos <- getFilteredTodos Active state.todos;
 		state.filter <- All;
 		render ();
-		true in
+		Js.true_ in
 	ignore (jq "#todo-list"
 		|> on' "change" ".toggle" onToggle
 		|> on' "dblclick" "label" edit
@@ -130,7 +130,7 @@ let bind_events () =
 	ignore (jq [%bs.raw "window"] |> on "hashchange" (fun [@bs.this] jq e ->
 		state.filter <- readFilter (String.sub urlHash 2 (String.length urlHash - 2));
 		render ();
-		true
+		Js.true_
 	));
 	();;
 
