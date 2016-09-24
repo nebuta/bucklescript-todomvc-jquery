@@ -4,6 +4,7 @@
 var ArrayOps     = require("./arrayOps");
 var Jquery$prime = require("jquery");
 var Hashtbl      = require("bs-platform/lib/js/hashtbl");
+var $$Array      = require("bs-platform/lib/js/array");
 var Model        = require("./model");
 var Template     = require("./template");
 var Jquery       = require("./jquery");
@@ -50,7 +51,6 @@ function render() {
   Model.calcIdx(state[/* todos */0], derivedState[/* todoIdx */0]);
   var todos;
   try {
-    console.log(state[/* todos */0].length);
     todos = Model.getFilteredTodos(state[/* filter */1], state[/* todos */0]);
   }
   catch (exn){
@@ -59,6 +59,8 @@ function render() {
   }
   var todoCount = todos.length;
   var html = Template.todoTemplate(todos);
+  var activeTodoCount = Model.getFilteredTodos(/* Active */1, state[/* todos */0]).length;
+  Jquery.jquery("#toggle-all").prop("checked", activeTodoCount ? "" : "true");
   Jquery.jquery("#todo-list").html(html);
   toggle(Jquery.jquery("#main"), +(todoCount > 0));
   renderFooter(/* () */0);
@@ -124,6 +126,19 @@ function bind_events() {
     render(/* () */0);
     return true;
   };
+  var onToggleAll = function (e) {
+    var is_checked = Jquery$prime(e.target).prop("checked");
+    var f = function (t) {
+      return /* record */[
+              /* title */t[/* title */0],
+              /* id */t[/* id */1],
+              /* completed */+is_checked
+            ];
+    };
+    state[/* todos */0] = $$Array.map(f, state[/* todos */0]);
+    render(/* () */0);
+    return true;
+  };
   var update = function (e) {
     var jq = this ;
     var el = Jquery$prime(e.target);
@@ -154,6 +169,7 @@ function bind_events() {
   };
   Jquery.jquery("#todo-list").on("change", ".toggle", onToggle).on("dblclick", "label", edit).on("keyup", ".edit", editKeyup).on("focusout", ".edit", update).on("click", ".destroy", destroy);
   Jquery.jquery("#footer").on("click", "#clear-completed", destroyCompleted);
+  Jquery.jquery("#toggle-all").on("change", onToggleAll);
   Jquery.jquery((window)).on("hashchange", function () {
         state[/* filter */1] = Types.readFilter($$String.sub(window.location.hash, 2, window.location.hash.length - 2 | 0));
         render(/* () */0);

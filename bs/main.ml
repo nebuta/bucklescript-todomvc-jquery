@@ -43,7 +43,6 @@ let render () =
 	let todos =
 		try
 			(* Ad hoc fix to avoid null value *)
-			Js.log (Array.length state.todos);
 			getFilteredTodos state.filter state.todos
 		with
 			_ ->
@@ -51,6 +50,8 @@ let render () =
 				state.todos in
 	let todoCount = Array.length todos in
 	let html = todoTemplate todos in
+ 	let activeTodoCount = Array.length (getFilteredTodos Active state.todos) in
+	ignore (jquery "#toggle-all" |> prop_ "checked" (if activeTodoCount = 0 then "true" else ""));
 	ignore (jquery "#todo-list" |> Jquery.html html);
  	toggle (jquery "#main") (todoCount > 0);
 
@@ -100,6 +101,12 @@ let bind_events () =
 				with completed = not state.todos.(i).completed};
 		render ();
 		Js.true_ in
+	let onToggleAll = fun [@bs.this] jq e ->
+		let is_checked = jq' e##target |> prop_bool "checked" in
+		let f t = {t with completed = Js.to_bool is_checked} in
+		state.todos <- Array.map f state.todos;
+		render ();
+		Js.true_ in
 	let update = fun [@bs.this] jq e ->
 		let el = jq' e##target in
 		let i = indexFromEl e##target in
@@ -127,6 +134,7 @@ let bind_events () =
 		|> on' "focusout" ".edit" update
 		|> on' "click" ".destroy" destroy);
 	ignore (jq "#footer" |> on' "click" "#clear-completed" destroyCompleted);
+	ignore (jq "#toggle-all" |> on "change" onToggleAll);
 	ignore (jq [%bs.raw "window"] |> on "hashchange" (fun [@bs.this] jq e ->
 		state.filter <- readFilter (String.sub urlHash 2 (String.length urlHash - 2));
 		render ();
